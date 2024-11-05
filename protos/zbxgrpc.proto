@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "pkg/zbxgrpc";
+
+package zbxgrpc;
+
+message ZbxValue {
+  string key = 1;
+  string value = 2;
+  int32  ts = 3;
+}
+
+message ZbxValueAck {
+  bool result = 1;
+}
+
+message ListZbxValue {
+  repeated ZbxValue values = 1;
+}
+
+
+service ZbxSender {
+  rpc pushValue(ZbxValue) returns(ZbxValueAck) {}
+
+  rpc pushValues(ListZbxValue) returns(ZbxValueAck) {}
+}
