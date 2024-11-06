@@ -4,14 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/mithraelle/zbx_tools/go/pkg/zbxgrpc"
+	pb "github.com/mithraelle/zbx_tools/go/pb/agent"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"time"
 )
 
-func pushValue(client zbxgrpc.ZbxSenderClient, value *zbxgrpc.ZbxValue) {
+func pushValue(client pb.ZbxAgentClient, value *pb.ZbxValue) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	resp, err := client.PushValue(ctx, value)
@@ -36,7 +36,7 @@ func main() {
 		log.Fatalf("fail to dial: %v", err)
 	}
 	defer conn.Close()
-	client := zbxgrpc.NewZbxSenderClient(conn)
+	client := pb.NewZbxAgentClient(conn)
 
 	fmt.Println("Enter key value pairs")
 	for {
@@ -45,7 +45,7 @@ func main() {
 			fmt.Println("Error reading input: ", err.Error())
 		} else {
 			fmt.Printf("Key: %v, Value: %v\n", key, value)
-			_, err = client.PushValue(context.Background(), &zbxgrpc.ZbxValue{Key: key, Value: value, Ts: int32(time.Now().Unix())})
+			_, err = client.PushValue(context.Background(), &pb.ZbxValue{Key: key, Value: value, Ts: int32(time.Now().Unix())})
 			if err != nil {
 				log.Fatalf("client.PushValue failed: %v", err)
 			}

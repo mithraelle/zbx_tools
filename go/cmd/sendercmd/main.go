@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/mithraelle/zbx_tools/go/pkg/zbxcmdsender"
+	"github.com/mithraelle/zbx_tools/go/pkg/cmd"
 	"strconv"
 	"time"
 )
@@ -13,11 +13,11 @@ func main() {
 
 	fmt.Println("Zabbix sender command test")
 
-	zbxSender := zbxcmdsender.NewZbxCmdSender("", "")
+	zbxSender := cmd.NewZbxCmdSender("", "")
 	zbxSender.DummyRun = true
 	zbxSender.Interval = 10 * time.Second
 
-	senderChan := make(chan *zbxcmdsender.CommandValue)
+	senderChan := make(chan *cmd.CommandValue)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -30,7 +30,7 @@ func main() {
 			fmt.Println("Error reading input: ", err.Error())
 		} else {
 			fmt.Printf("Key: %v, Value: %v\n", key, value)
-			senderChan <- &zbxcmdsender.CommandValue{Key: key, Value: value, TS: strconv.Itoa(int(time.Now().Unix()))}
+			senderChan <- &cmd.CommandValue{Key: key, Value: value, TS: strconv.Itoa(int(time.Now().Unix()))}
 		}
 	}
 }

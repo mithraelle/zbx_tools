@@ -1,4 +1,4 @@
-package zbxcmdsender
+package cmd
 
 import (
 	"context"
@@ -83,13 +83,15 @@ func (z *SenderCommand) getCommand() *exec.Cmd {
 
 func (z *SenderCommand) SendValues(values []*CommandValue, try int) {
 	var senderIn io.WriteCloser
+	var err error
+
 	senderCmd := z.getCommand()
 
 	if z.DummyRun {
 		log.Println("RUN: ", senderCmd.String())
 		senderIn = os.Stdout
 	} else {
-		senderIn, err := senderCmd.StdinPipe()
+		senderIn, err = senderCmd.StdinPipe()
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
@@ -102,8 +104,7 @@ func (z *SenderCommand) SendValues(values []*CommandValue, try int) {
 			host = "-"
 		}
 
-		s := fmt.Sprintf("%v %v %v %v\n", host, v.Key, v.TS, v.Value)
-		io.WriteString(senderIn, s)
+		fmt.Fprintf(senderIn, "%v %v %v %v\n", host, v.Key, v.TS, v.Value)
 	}
 
 	if z.DummyRun {

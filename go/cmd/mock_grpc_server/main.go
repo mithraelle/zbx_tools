@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/mithraelle/zbx_tools/go/pkg/zbxgrpc"
-	"github.com/mithraelle/zbx_tools/go/pkg/zbxgrpcagent"
+	pb "github.com/mithraelle/zbx_tools/go/pb/agent"
+	"github.com/mithraelle/zbx_tools/go/pkg/agent"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -21,15 +21,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ch := make(chan *zbxgrpc.ZbxValue)
+	ch := make(chan *pb.ZbxValue)
 
 	lis, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	go zbxgrpcagent.RunZBXGrpcAgent(ctx, lis, []grpc.ServerOption{}, ch)
-	
+	go agent.RunAgent(ctx, lis, []grpc.ServerOption{}, ch)
+
 	for v := range ch {
 		fmt.Println(v)
 	}

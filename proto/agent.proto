@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "pkg/zbxgrpc";
+option go_package = "pb/agent";
 
-package zbxgrpc;
+package agent;
 
 message ZbxValue {
   string key = 1;
@@ -19,7 +19,7 @@ message ListZbxValue {
 }
 
 
-service ZbxSender {
+service ZbxAgent {
   rpc pushValue(ZbxValue) returns(ZbxValueAck) {}
 
   rpc pushValues(ListZbxValue) returns(ZbxValueAck) {}
