@@ -21,7 +21,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ch := make(chan *pb.ZbxValue)
+	ch := make(chan *pb.ZbxValue, 100)
 
 	lis, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {

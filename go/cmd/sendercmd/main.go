@@ -2,35 +2,43 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"github.com/mithraelle/zbx_tools/go/pkg/cmd"
-	"strconv"
+	"github.com/mithraelle/zbx_tools/go/pkg/sender"
+	"github.com/mithraelle/zbx_tools/go/pkg/sender/cmdsender"
+	"github.com/mithraelle/zbx_tools/go/pkg/sender/mocksender"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
+var dummyRun = flag.Bool("dummy", false, "help message for flag int")
+var zbxSenderBin = flag.String("sender-bin", "", "help message for flag int")
+var zbxSenderConfig = flag.String("config", "", "help message for flag int")
+
 func main() {
-	var key, value string
-
 	fmt.Println("Zabbix sender command test")
+	flag.Parse()
 
-	zbxSender := cmd.NewZbxCmdSender("", "")
-	zbxSender.DummyRun = true
-	zbxSender.Interval = 10 * time.Second
+	fmt.Println("Command: ", *zbxSenderBin)
+	fmt.Println("Config: ", *zbxSenderConfig)
+	fmt.Println("Dummy Run: ", *dummyRun)
 
-	senderChan := make(chan *cmd.CommandValue)
+	senderChan := make(chan sender.Item)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go zbxSender.Run(ctx, senderChan)
+	go mocksender.ThrowDice(ctx, senderChan, 3)
 
-	fmt.Println("Enter key value pairs")
-	for {
-		_, err := fmt.Scanf("%v %v", &key, &value)
-		if err != nil {
-			fmt.Println("Error reading input: ", err.Error())
-		} else {
-			fmt.Printf("Key: %v, Value: %v\n", key, value)
-			senderChan <- &cmd.CommandValue{Key: key, Value: value, TS: strconv.Itoa(int(time.Now().Unix()))}
-		}
-	}
+	cmdSender := cmdsender.NewCMDSender(*zbxSenderBin, *zbxSenderConfig)
+	cmdSender.DummyRun = *dummyRun
+	iBuffer := sender.NewItemBuffer()
+	iBuffer.Timeout = 10 * time.Second
+
+	go iBuffer.Read(ctx, senderChan, cmdSender)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
 }
