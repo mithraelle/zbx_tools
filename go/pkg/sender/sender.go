@@ -8,6 +8,11 @@ type Item struct {
 	Ns    int    `json:"ns"`
 }
 
+type ItemSendError struct {
+	Items []Item
+	Err   error
+}
+
 type Sender interface {
-	Send(items []Item, try int) error
+	Send(items []Item, errorSink chan<- ItemSendError)
 }

@@ -23,10 +23,20 @@ func ThrowDice(ctx context.Context, ch chan<- sender.Item, interval int) {
 
 type MockSender struct{}
 
-func (m *MockSender) Send(items []sender.Item, try int) error {
-	log.Println("Send items ", len(items), try)
+func (m *MockSender) Send(items []sender.Item, errorSink chan<- sender.ItemSendError) {
+	log.Println("Send items ", len(items))
 	for _, item := range items {
 		println(item.Key, item.Value, item.Clock, item.Ns)
 	}
-	return nil
+}
+
+func LogErrors(ctx context.Context, ch <-chan sender.ItemSendError) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case e := <-ch:
+			log.Println("Sender error: ", e.Err.Error())
+		}
+	}
 }

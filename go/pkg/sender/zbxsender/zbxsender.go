@@ -3,7 +3,6 @@ package zbxsender
 import (
 	"fmt"
 	"github.com/mithraelle/zbx_tools/go/pkg/sender"
-	"log"
 	"net"
 	"time"
 )
@@ -22,7 +21,7 @@ func (z *ZBXSender) connect() (net.Conn, error) {
 	return net.DialTimeout("tcp", z.conf.ServerAddr, ConnectionTimeout)
 }
 
-func (z *ZBXSender) Send(items []sender.Item, try int) error {
+func (z *ZBXSender) Send(items []sender.Item, errorSink chan<- sender.ItemSendError) {
 	con, err := z.connect()
 	if err != nil {
 		panic(err)
@@ -30,19 +29,18 @@ func (z *ZBXSender) Send(items []sender.Item, try int) error {
 	defer con.Close()
 
 	data := newPacket(z.conf.Hostname, items).GetPayload()
-	log.Println("Send data: ", string(data))
 	_, err = con.Write(data)
 	if err != nil {
-		err = fmt.Errorf("Error while sending the data: %s", err.Error())
-		return err
+		err = fmt.Errorf("error while sending the data: %s", err.Error())
+	} else {
+		res := make([]byte, 1024)
+		_, err = con.Read(res)
+		if err != nil {
+			err = fmt.Errorf("error while receiving the data: %s", err.Error())
+		}
 	}
 
-	res := make([]byte, 1024)
-	_, err = con.Read(res)
-	if err != nil {
-		err = fmt.Errorf("Error while receiving the data: %s", err.Error())
-		return err
+	if err != nil && errorSink != nil {
+		errorSink <- sender.ItemSendError{Err: err, Items: items}
 	}
-
-	return nil
 }

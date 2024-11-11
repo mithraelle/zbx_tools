@@ -11,6 +11,7 @@ import (
 )
 
 const ZabbixSenderTimeout = 15 * time.Second
+const MaxTries = 5
 
 type CMDSender struct {
 	Bin     string
@@ -43,7 +44,21 @@ func (z *CMDSender) getCommand() *exec.Cmd {
 		"-")
 }
 
-func (z *CMDSender) Send(items []sender.Item, try int) error {
+func (z *CMDSender) Send(items []sender.Item, errorSink chan<- sender.ItemSendError) {
+	var err error
+	for i := 0; i < MaxTries; i++ {
+		err = z.runCommand(items)
+		if err == nil {
+			return
+		}
+	}
+
+	if errorSink != nil {
+		errorSink <- sender.ItemSendError{Items: items, Err: err}
+	}
+}
+
+func (z *CMDSender) runCommand(items []sender.Item) error {
 	var senderIn io.WriteCloser
 	var err error
 
@@ -52,12 +67,8 @@ func (z *CMDSender) Send(items []sender.Item, try int) error {
 	if z.DummyRun {
 		log.Println("RUN: ", senderCmd.String())
 		senderIn = os.Stdout
-	} else {
-		senderIn, err = senderCmd.StdinPipe()
-		if err != nil {
-			log.Fatalln(err.Error())
-		}
-		defer senderIn.Close()
+	} else if senderIn, err = senderCmd.StdinPipe(); err != nil {
+		return err
 	}
 
 	for _, v := range items {
@@ -69,15 +80,9 @@ func (z *CMDSender) Send(items []sender.Item, try int) error {
 		fmt.Fprintf(senderIn, "%v %v %v %v\n", host, v.Key, v.Clock, v.Value)
 	}
 
-	if z.DummyRun {
-		return err
-	}
-	senderIn.Close()
-
-	if _, err := senderCmd.CombinedOutput(); err != nil {
-		if try > 0 {
-			z.Send(items, try-1)
-		}
+	if !z.DummyRun {
+		senderIn.Close()
+		_, err = senderCmd.CombinedOutput()
 	}
 
 	return err

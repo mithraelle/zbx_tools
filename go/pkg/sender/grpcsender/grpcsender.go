@@ -5,7 +5,6 @@ import (
 	pb "github.com/mithraelle/zbx_tools/go/pb/agent"
 	"github.com/mithraelle/zbx_tools/go/pkg/sender"
 	"google.golang.org/grpc"
-	"log"
 	"time"
 )
 
@@ -28,11 +27,9 @@ func NewGRPCSender(serverAddr string, opts []grpc.DialOption) (*GRPCSender, erro
 	return &GRPCSender{client: client, conn: conn, Timeout: GRPCTimeout}, nil
 }
 
-func (s *GRPCSender) Send(items []sender.Item, try int) error {
+func (s *GRPCSender) Send(items []sender.Item, errorSink chan<- sender.ItemSendError) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.Timeout)
 	defer cancel()
-
-	log.Println("Sending values")
 
 	grpcVals := pb.ListZbxValue{}
 	for _, item := range items {
@@ -40,8 +37,7 @@ func (s *GRPCSender) Send(items []sender.Item, try int) error {
 	}
 
 	_, err := s.client.PushValues(ctx, &grpcVals)
-	if err != nil {
-		log.Printf("Error pushing values: %v", err)
+	if err != nil && errorSink != nil {
+		errorSink <- sender.ItemSendError{Items: items, Err: err}
 	}
-	return nil
 }
