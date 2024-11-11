@@ -26,6 +26,7 @@ func main() {
 	fmt.Println("Dummy Run: ", *dummyRun)
 
 	senderChan := make(chan sender.Item)
+	errorChan := make(chan sender.ItemSendError)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -33,10 +34,11 @@ func main() {
 
 	cmdSender := cmdsender.NewCMDSender(*zbxSenderBin, *zbxSenderConfig)
 	cmdSender.DummyRun = *dummyRun
-	iBuffer := sender.NewItemBuffer()
-	iBuffer.Timeout = 10 * time.Second
+	iCollector := sender.NewItemCollector()
+	iCollector.Timeout = 10 * time.Second
 
-	go iBuffer.Read(ctx, senderChan, cmdSender)
+	go iCollector.Read(ctx, senderChan, cmdSender, errorChan)
+	go mocksender.LogErrors(ctx, errorChan)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

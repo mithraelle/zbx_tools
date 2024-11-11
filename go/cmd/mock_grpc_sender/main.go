@@ -26,7 +26,7 @@ func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-	grpcSender, err := grpcsender.NewGRPCSender(serverAddr, opts)
+	grpcS, err := grpcsender.NewGRPCSender(serverAddr, opts)
 	if err != nil {
 		panic(err)
 	}
@@ -35,11 +35,14 @@ func main() {
 	defer cancel()
 
 	ch := make(chan sender.Item)
+	chErr := make(chan sender.ItemSendError)
 	go mocksender.ThrowDice(ctx, ch, 5)
 
-	iBuffer := sender.NewItemBuffer()
-	iBuffer.Timeout = 15 * time.Second
-	go iBuffer.Read(ctx, ch, grpcSender)
+	iCollector := sender.NewItemCollector()
+	iCollector.Timeout = 15 * time.Second
+	go iCollector.Read(ctx, ch, grpcS, chErr)
+
+	go mocksender.LogErrors(ctx, chErr)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

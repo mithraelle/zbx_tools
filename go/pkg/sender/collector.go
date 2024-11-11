@@ -17,7 +17,7 @@ func NewItemCollector() *ItemCollector {
 	return &ItemCollector{Size: 100, Timeout: BufferTimeout}
 }
 
-func (s *ItemCollector) Read(ctx context.Context, fanIn <-chan Item, send Sender, errorSink <-chan ItemSendError) {
+func (s *ItemCollector) Read(ctx context.Context, fanIn <-chan Item, send Sender, errorSink chan<- ItemSendError) {
 	items := make([]Item, 0)
 	timeout := time.After(s.Timeout)
 

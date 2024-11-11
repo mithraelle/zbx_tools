@@ -12,9 +12,12 @@ import (
 )
 
 func main() {
-	ch := make(chan sender.Item)
+	//ch := make(chan sender.Item)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	errCh := make(chan sender.ItemSendError)
+	go mocksender.LogErrors(ctx, errCh)
 
 	conf := zbxsender.NewConfig("zabbix_sender.conf")
 
@@ -23,12 +26,13 @@ func main() {
 		sender.Item{Key: "trap", Value: "1", Clock: int(time.Now().Unix())},
 	}
 
-	zbxSender.Send(items, 0)
-	return
+	zbxSender.Send(items, errCh)
 
-	go mocksender.ThrowDice(ctx, ch, 15)
-	iBuffer := sender.NewItemBuffer()
-	go iBuffer.Read(ctx, ch, zbxSender)
+	/*
+		go mocksender.ThrowDice(ctx, ch, 15)
+		iBuffer := sender.NewItemCollector()
+		go iBuffer.Read(ctx, ch, zbxSender)
+	*/
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
