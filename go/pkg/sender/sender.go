@@ -14,5 +14,5 @@ type ItemSendError struct {
 }
 
 type Sender interface {
-	Send(items []Item, errorSink chan<- ItemSendError)
+	Send([]Item, chan<- ItemSendError)
 }

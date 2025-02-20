@@ -5,6 +5,7 @@ import (
 	"github.com/mithraelle/zbx_tools/go/pkg/sender"
 	"github.com/mithraelle/zbx_tools/go/pkg/sender/mocksender"
 	"github.com/mithraelle/zbx_tools/go/pkg/sender/zbxsender"
+	"github.com/mithraelle/zbx_tools/go/pkg/sender/zbxsender/config"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,7 +20,7 @@ func main() {
 	errCh := make(chan sender.ItemSendError)
 	go mocksender.LogErrors(ctx, errCh)
 
-	conf := zbxsender.NewConfig("zabbix_sender.conf")
+	conf := config.FromFile("zabbix_sender.conf")
 
 	zbxSender := zbxsender.NewZBXSender(*conf)
 	items := []sender.Item{
@@ -30,7 +31,7 @@ func main() {
 
 	/*
 		go mocksender.ThrowDice(ctx, ch, 15)
-		iBuffer := sender.NewItemCollector()
+		iBuffer := sender.NewCollector()
 		go iBuffer.Read(ctx, ch, zbxSender)
 	*/
 

@@ -34,10 +34,10 @@ func main() {
 
 	cmdSender := cmdsender.NewCMDSender(*zbxSenderBin, *zbxSenderConfig)
 	cmdSender.DummyRun = *dummyRun
-	iCollector := sender.NewItemCollector()
-	iCollector.Timeout = 10 * time.Second
+	iCollector := sender.NewCollector(cmdSender, sender.WithErrorSink(errorChan))
+	iCollector.FlushTimeout = 10 * time.Second
 
-	go iCollector.Read(ctx, senderChan, cmdSender, errorChan)
+	go iCollector.Read(ctx, senderChan)
 	go mocksender.LogErrors(ctx, errorChan)
 
 	sigs := make(chan os.Signal, 1)

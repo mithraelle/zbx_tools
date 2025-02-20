@@ -1,4 +1,4 @@
-package zbxsender
+package config
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type Config struct {
 	ServerAddr     string
 }
 
-func NewConfig(filename string) *Config {
+func FromFile(filename string) Config {
 	conf := Config{}
 
 	viper.AddConfigPath(filepath.Dir(filename))
@@ -25,7 +25,7 @@ func NewConfig(filename string) *Config {
 	viper.SetConfigType("env")
 
 	viper.SetDefault("Timeout", 3)
-	viper.SetDefault("Hostname", "ZabbixServer")
+	viper.SetDefault("Hostname", "ZabbixClient")
 	viper.SetDefault("ServerActive", "localhost")
 
 	err := viper.ReadInConfig()
@@ -39,7 +39,7 @@ func NewConfig(filename string) *Config {
 	}
 
 	conf.setServerAddr()
-	return &conf
+	return conf
 }
 
 func (c *Config) setServerAddr() {
@@ -48,4 +48,14 @@ func (c *Config) setServerAddr() {
 	} else {
 		c.ServerAddr = c.ServerActive + ":10051"
 	}
+}
+
+func WithOptions(opts ...Option) Config {
+	conf := Config{ServerAddr: "localhost:10051", Timeout: 3, Hostname: "ZabbixClient"}
+
+	for _, o := range opts {
+		o.set(&conf)
+	}
+
+	return conf
 }

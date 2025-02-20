@@ -8,18 +8,60 @@ import (
 
 const BufferTimeout = time.Second * 60
 
-type ItemCollector struct {
-	Size    int
-	Timeout time.Duration
+type CollectorOption interface {
+	set(*Collector)
 }
 
-func NewItemCollector() *ItemCollector {
-	return &ItemCollector{Size: 100, Timeout: BufferTimeout}
+type flushLimitOption int
+
+func WithFlushLimit(limit int) CollectorOption {
+	return flushLimitOption(limit)
 }
 
-func (s *ItemCollector) Read(ctx context.Context, fanIn <-chan Item, send Sender, errorSink chan<- ItemSendError) {
+func (f flushLimitOption) set(c *Collector) {
+	c.FlushLimit = int(f)
+}
+
+type flushTimeoutOption time.Duration
+
+func WithFlushTimeout(timeout time.Duration) CollectorOption {
+	return flushTimeoutOption(timeout)
+}
+
+func (f flushTimeoutOption) set(c *Collector) {
+	c.FlushTimeout = time.Duration(f)
+}
+
+type errorSinkOption chan<- ItemSendError
+
+func WithErrorSink(errorSink chan<- ItemSendError) CollectorOption {
+	return errorSinkOption(errorSink)
+}
+
+func (errorSink errorSinkOption) set(c *Collector) {
+	c.ErrorSink = errorSink
+}
+
+type Collector struct {
+	FlushLimit   int
+	FlushTimeout time.Duration
+	ErrorSink    chan<- ItemSendError
+	Sender       Sender
+}
+
+func NewCollector(sender Sender, opts ...CollectorOption) *Collector {
+	collector := &Collector{FlushLimit: 100, FlushTimeout: BufferTimeout, ErrorSink: nil, Sender: sender}
+
+	for _, o := range opts {
+		o.set(collector)
+	}
+
+	return collector
+}
+
+func (s *Collector) Read(ctx context.Context, fanIn <-chan Item) {
 	items := make([]Item, 0)
-	timeout := time.After(s.Timeout)
+	timeout := time.After(s.FlushTimeout)
 
 	for {
 		select {
@@ -28,17 +70,17 @@ func (s *ItemCollector) Read(ctx context.Context, fanIn <-chan Item, send Sender
 		case item := <-fanIn:
 			items = append(items, item)
 			log.Println("Got item. Items: ", len(items))
-			if len(items) >= s.Size {
-				go send.Send(items, errorSink)
+			if len(items) >= s.FlushLimit {
+				go s.Sender.Send(items, s.ErrorSink)
 				items = make([]Item, 0)
-				timeout = time.After(s.Timeout)
+				timeout = time.After(s.FlushTimeout)
 			}
 		case <-timeout:
 			log.Println("Buffer timeout")
 			if len(items) > 0 {
-				go send.Send(items, errorSink)
+				go s.Sender.Send(items, s.ErrorSink)
 				items = make([]Item, 0)
-				timeout = time.After(s.Timeout)
+				timeout = time.After(s.FlushTimeout)
 			}
 		}
 	}

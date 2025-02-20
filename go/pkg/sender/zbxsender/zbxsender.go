@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mithraelle/zbx_tools/go/pkg/sender"
+	"github.com/mithraelle/zbx_tools/go/pkg/sender/zbxsender/config"
 	"net"
 	"time"
 )
@@ -11,10 +12,10 @@ import (
 const ConnectionTimeout = time.Second * 10
 
 type ZBXSender struct {
-	conf Config
+	conf config.Config
 }
 
-func NewZBXSender(conf Config) *ZBXSender {
+func NewZBXSender(conf config.Config) *ZBXSender {
 	return &ZBXSender{conf: conf}
 }
 

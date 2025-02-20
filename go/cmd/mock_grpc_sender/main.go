@@ -38,9 +38,8 @@ func main() {
 	chErr := make(chan sender.ItemSendError)
 	go mocksender.ThrowDice(ctx, ch, 5)
 
-	iCollector := sender.NewItemCollector()
-	iCollector.Timeout = 15 * time.Second
-	go iCollector.Read(ctx, ch, grpcS, chErr)
+	iCollector := sender.NewCollector(grpcS, sender.WithErrorSink(chErr), sender.WithFlushLimit(10), sender.WithFlushTimeout(30*time.Second))
+	go iCollector.Read(ctx, ch)
 
 	go mocksender.LogErrors(ctx, chErr)
 
